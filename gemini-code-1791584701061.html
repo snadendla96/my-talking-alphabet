@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="en-US">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>My Talking Alphabet</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#fffaf1;color:#243653;font-family:ui-rounded,'Trebuchet MS',sans-serif;-webkit-tap-highlight-color:transparent}
+main{max-width:1160px;margin:auto;padding:20px 16px 40px}
+header{text-align:center}
+h1{font-size:clamp(32px,6vw,56px);margin:5px 0;color:#6751bd;text-shadow:2px 2px 0px #e4ddf5}
+header p{font-size:19px;margin:5px 0 15px;color:#505d75}
+.controls{display:flex;gap:12px;justify-content:center;align-items:center;flex-wrap:wrap;margin:18px 0}
+button,select{font:inherit}
+button{cursor:pointer}
+button:focus-visible,select:focus-visible{outline:4px solid #6751bd;outline-offset:3px}
+.control{background:white;border:2px solid #dcd7ed;border-radius:14px;padding:8px 14px;color:#243653;font-weight:bold}
+
+.stage{background:white;border:3px solid #e4ddf5;border-radius:26px;padding:20px 26px;display:flex;align-items:center;justify-content:center;gap:26px;min-height:200px;margin-bottom:22px;box-shadow:0 10px 25px rgba(103,81,189,0.08);transition:transform 0.2s}
+.hero-picture{width:160px;flex:0 0 160px;font-size:90px;display:flex;align-items:center;justify-content:center;background:#f7f5fd;border-radius:22px;height:160px;box-shadow:inset 0 0 12px rgba(0,0,0,0.03)}
+.stage h2{margin:0 0 6px;font-size:36px;color:#243653}
+.stage p{font-size:20px;margin:0 0 8px;color:#606777}
+.stage-sound-text{display:inline-block;font-size:20px;font-weight:900;color:#6751bd;background:#eaddff;padding:4px 16px;border-radius:14px;margin-bottom:12px}
+.replay{border:0;background:#6850bd;color:white;border-radius:14px;padding:12px 22px;font-size:18px;font-weight:bold;box-shadow:0 4px 12px rgba(104,80,189,0.3);transition:transform 0.1s, background 0.2s;display:block}
+.replay:active{transform:scale(0.95)}
+
+.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+.letter-card{border:3px solid #e4ddf5;border-radius:22px;background:white;padding:16px 8px;color:#243653;transition:transform 0.15s, box-shadow 0.15s, border-color 0.15s;display:flex;flex-direction:column;align-items:center;cursor:pointer;user-select:none}
+.letter-card:hover{transform:translateY(-5px);box-shadow:0 8px 20px rgba(103,81,189,0.15);border-color:#a28bf2}
+.letter-card:active,.letter-card.pop-active{transform:scale(0.92)}
+.letter-card[aria-pressed=true]{border-color:#6850bd;background:#f3efff;box-shadow:0 0 0 4px #d7c1f4}
+
+.pair{display:block;font-weight:900;font-size:42px;color:#6751bd}
+.picture{display:block;font-size:52px;margin:6px 0}
+.word{display:block;font-weight:bold;font-size:19px;color:#243653}
+.sound-badge{display:block;font-size:16px;margin-top:6px;color:#5942a0;background:#eaddff;padding:3px 14px;border-radius:12px;font-weight:900}
+
+#status{text-align:center;min-height:28px;margin:12px 0;color:#6751bd;font-size:18px;font-weight:bold}
+
+@media(max-width:850px){.grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:520px){
+  main{padding:16px 10px}
+  .grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .stage{flex-direction:column;text-align:center;gap:12px;padding:16px}
+  .hero-picture{width:130px;height:130px;font-size:70px}
+  .stage h2{font-size:26px}
+  .pair{font-size:36px}
+}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>🌈 My Talking Alphabet</h1>
+    <p>Touch any letter to hear its name and short sound!</p>
+  </header>
+
+  <div id="status" role="status" aria-live="polite">✨ Built-in Audio Synthesizer Ready!</div>
+
+  <div class="controls">
+    <label><input id="slow" type="checkbox"> Read Slow</label>
+    <button id="stop" class="control">■ Stop Audio</button>
+  </div>
+
+  <section class="stage" aria-label="Selected letter card">
+    <div class="hero-picture" id="hero" aria-hidden="true">🍎</div>
+    <div>
+      <h2 id="heading">a — apple</h2>
+      <p id="description">“a” as in apple</p>
+      <div id="stage-sound" class="stage-sound-text">Sound: a — ah</div>
+      <button id="replay" class="replay">🔊 Play Sound Again</button>
+    </div>
+  </section>
+
+  <section class="grid" id="grid" aria-label="Alphabet letters"></section>
+</main>
+
+<script>
+const ALPHABET = [
+  { letter: 'A', word: 'apple', sound: 'ah', ttsPhonetic: 'ah', type: 'vowel', freq: 650, emoji: '🍎' },
+  { letter: 'B', word: 'ball', sound: 'buh', ttsPhonetic: 'buh', type: 'plosive', freq: 110, emoji: '⚽' },
+  { letter: 'C', word: 'cat', sound: 'cuh', ttsPhonetic: 'kuh', type: 'plosive', freq: 160, emoji: '🐱' },
+  { letter: 'D', word: 'dog', sound: 'duh', ttsPhonetic: 'duh', type: 'plosive', freq: 130, emoji: '🐶' },
+  { letter: 'E', word: 'elephant', sound: 'eh', ttsPhonetic: 'eh', type: 'vowel', freq: 500, emoji: '🐘' },
+  { letter: 'F', word: 'fish', sound: 'fuh', ttsPhonetic: 'fuh', type: 'fricative', freq: 1200, emoji: '🐟' },
+  { letter: 'G', word: 'gorilla', sound: 'guh', ttsPhonetic: 'guh', type: 'plosive', freq: 100, emoji: '🦍' },
+  { letter: 'H', word: 'hat', sound: 'huh', ttsPhonetic: 'huh', type: 'fricative', freq: 800, emoji: '🎩' },
+  { letter: 'I', word: 'igloo', sound: 'ih', ttsPhonetic: 'ih', type: 'vowel', freq: 400, emoji: '🛖' },
+  { letter: 'J', word: 'juice', sound: 'juh', ttsPhonetic: 'juh', type: 'plosive', freq: 150, emoji: '🧃' },
+  { letter: 'K', word: 'kangaroo', sound: 'kuh', ttsPhonetic: 'kuh', type: 'plosive', freq: 160, emoji: '🦘' },
+  { letter: 'L', word: 'lion', sound: 'luh', ttsPhonetic: 'luh', type: 'vowel', freq: 300, emoji: '🦁' },
+  { letter: 'M', word: 'monkey', sound: 'muh', ttsPhonetic: 'mmuh', type: 'vowel', freq: 220, emoji: '🐒' },
+  { letter: 'N', word: 'nest', sound: 'nuh', ttsPhonetic: 'nnuh', type: 'vowel', freq: 250, emoji: '🪹' },
+  { letter: 'O', word: 'octopus', sound: 'ah', ttsPhonetic: 'ah', type: 'vowel', freq: 550, emoji: '🐙' },
+  { letter: 'P', word: 'pig', sound: 'puh', ttsPhonetic: 'puh', type: 'plosive', freq: 140, emoji: '🐷' },
+  { letter: 'Q', word: 'question', sound: 'kwuh', ttsPhonetic: 'kwuh', type: 'plosive', freq: 170, emoji: '❓' },
+  { letter: 'R', word: 'ring', sound: 'ruh', ttsPhonetic: 'rruh', type: 'vowel', freq: 200, emoji: '💍' },
+  { letter: 'S', word: 'sun', sound: 'suh', ttsPhonetic: 'ssuh', type: 'fricative', freq: 2500, emoji: '☀️' },
+  { letter: 'T', word: 'train', sound: 'tuh', ttsPhonetic: 'tuh', type: 'plosive', freq: 180, emoji: '🚂' },
+  { letter: 'U', word: 'umbrella', sound: 'uh', ttsPhonetic: 'uh', type: 'vowel', freq: 450, emoji: '☂️' },
+  { letter: 'V', word: 'van', sound: 'vuh', ttsPhonetic: 'vvuh', type: 'fricative', freq: 200, emoji: '🚐' },
+  { letter: 'W', word: 'watch', sound: 'wuh', ttsPhonetic: 'wuh', type: 'vowel', freq: 300, emoji: '⌚' },
+  { letter: 'X', word: 'box', sound: 'ks', ttsPhonetic: 'ecks', type: 'fricative', freq: 2000, emoji: '📦' },
+  { letter: 'Y', word: 'yellow', sound: 'yuh', ttsPhonetic: 'yuh', type: 'vowel', freq: 350, emoji: '💛' },
+  { letter: 'Z', word: 'zebra', sound: 'zuh', ttsPhonetic: 'zzuh', type: 'fricative', freq: 300, emoji: '🦓' }
+];
+
+let selectedIndex = 0;
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+const gridEl = document.getElementById('grid');
+const heroEl = document.getElementById('hero');
+const headingEl = document.getElementById('heading');
+const descEl = document.getElementById('description');
+const stageSoundEl = document.getElementById('stage-sound');
+const slowCheck = document.getElementById('slow');
+const stopBtn = document.getElementById('stop');
+const replayBtn = document.getElementById('replay');
+
+function stopAudio() {
+  window.speechSynthesis.cancel();
+}
+
+// Generate realistic acoustic pop/click for consonant sound emphasis
+function playSynthesizedPop(item) {
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume();
+  }
+
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+
+  if (item.type === 'plosive') {
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(item.freq, audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(30, audioCtx.currentTime + 0.08);
+    gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.08);
+  } else if (item.type === 'fricative') {
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(item.freq, audioCtx.currentTime);
+    gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.12);
+  } else {
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(item.freq, audioCtx.currentTime);
+    gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+  }
+
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.start();
+  osc.stop(audioCtx.currentTime + 0.12);
+}
+
+function playLetterSound(item) {
+  stopAudio();
+  playSynthesizedPop(item);
+
+  const speed = slowCheck.checked ? 0.75 : 0.95;
+
+  // Step 1: Say letter name
+  const u1 = new SpeechSynthesisUtterance(item.letter.toLowerCase());
+  u1.rate = speed;
+
+  // Step 2: Say specific phonics sound (e.g. "cuh", "buh", "ah")
+  const u2 = new SpeechSynthesisUtterance(item.ttsPhonetic);
+  u2.rate = speed * 0.8;
+  u2.pitch = 1.15; // Higher pitch helps pronounce crisp short phonemes
+
+  window.speechSynthesis.speak(u1);
+  window.speechSynthesis.speak(u2);
+}
+
+function selectLetter(index) {
+  selectedIndex = index;
+  const item = ALPHABET[index];
+
+  heroEl.textContent = item.emoji;
+  headingEl.textContent = `${item.letter.toLowerCase()} — ${item.word}`;
+  descEl.textContent = `“${item.letter.toLowerCase()}” as in ${item.word}`;
+  stageSoundEl.textContent = `Sound: ${item.letter.toLowerCase()} — ${item.sound}`;
+
+  const cards = gridEl.querySelectorAll('.letter-card');
+  cards.forEach((card, idx) => {
+    const isSelected = idx === index;
+    card.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
+    if (isSelected) {
+      card.classList.add('pop-active');
+      setTimeout(() => card.classList.remove('pop-active'), 150);
+    }
+  });
+
+  playLetterSound(item);
+}
+
+function renderGrid() {
+  gridEl.innerHTML = '';
+  ALPHABET.forEach((item, index) => {
+    const card = document.createElement('button');
+    card.className = 'letter-card';
+    card.setAttribute('aria-pressed', index === selectedIndex ? 'true' : 'false');
+    card.innerHTML = `
+      <span class="pair">${item.letter.toLowerCase()}</span>
+      <span class="picture">${item.emoji}</span>
+      <span class="word">${item.word}</span>
+      <span class="sound-badge">${item.sound}</span>
+    `;
+    card.addEventListener('click', () => selectLetter(index));
+    gridEl.appendChild(card);
+  });
+}
+
+// Event Listeners
+stopBtn.addEventListener('click', stopAudio);
+replayBtn.addEventListener('click', () => playLetterSound(ALPHABET[selectedIndex]));
+
+// Init
+renderGrid();
+</script>
+</body>
+</html>
